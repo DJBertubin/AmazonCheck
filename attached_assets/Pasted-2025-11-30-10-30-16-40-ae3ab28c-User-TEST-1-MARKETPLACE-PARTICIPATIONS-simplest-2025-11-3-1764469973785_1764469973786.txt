@@ -1,0 +1,144 @@
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+=== TEST 1: MARKETPLACE PARTICIPATIONS (simplest) ===
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+✅ Found credentials for: Rush Promo
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+Database LWA Client ID: amzn1.application-oa2-client.fa6a84f10fa...
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+Refresh token preview: Atzr|IwEBIAxhaOyGF9S...
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+Testing SIMPLEST endpoint: /sellers/v1/marketplaceParticipations
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+Client IDs match: true
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+Environment LWA Client ID: amzn1.application-oa2-client.fa6a84f10fa...
+2025-11-30 10:30:16.40
+ae3ab28c
+User
+=== SP-API Credential Check ===
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+SP-API request URL: https://sellingpartnerapi-na.amazon.com/sellers/v1/marketplaceParticipations
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+}
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+"accept": "application/json",
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+Successfully obtained access token, expires in: 3600 seconds
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+"x-amz-access-token": "Atza|IwEBIAcdgg8FPGA7Z5gg6WvX6PnBm0DgEHXgcLO4iRxNJ41LTG4I4_LbmLVx_jDJ0ymWkhZT72l2BSuHqj51_IjG_voc9r3fxEgDFVwqFrRpMGJao-xChE6K11pb1I7FX9DT6J1OeYNb-U6YR5vwrfuIarwZ4jhkQv4amwaF6rDjD-fI3skSCq9wUikEQZlUTwIa9mgio646TBME8IrYP5hxvWD0TotezbtjNE562p9eEm3AN6wISLlmOemWUfgptTok5wnVz4jbhIe0cZpomvozMtPiRNpstvksKhE-2so3y7S1cW7CNSvMyW43rlobaSizl5I90pjL8XBNRO1u4kTUa9Bd",
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+"content-type": "application/json",
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+"user-agent": "Ber2bytesync/1.0 (Language=TypeScript)"
+2025-11-30 10:30:16.48
+ae3ab28c
+User
+SP-API request headers: {
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+SP-API Success - Received data: {"payload":[{"marketplace":{"id":"A1AM78C64UM0Y8","countryCode":"MX","name":"Amazon.com.mx","defaultCurrencyCode":"MXN","defaultLanguageCode":"es_MX","domainName":"www.amazon.com.mx"},"storeName":"Koo
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+Testing PUBLIC catalog search endpoint with keywords: "laptop"
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+"x-amz-access-token": "Atza|IwEBIAcdgg8FPGA7Z5gg6WvX6PnBm0DgEHXgcLO4iRxNJ41LTG4I4_LbmLVx_jDJ0ymWkhZT72l2BSuHqj51_IjG_voc9r3fxEgDFVwqFrRpMGJao-xChE6K11pb1I7FX9DT6J1OeYNb-U6YR5vwrfuIarwZ4jhkQv4amwaF6rDjD-fI3skSCq9wUikEQZlUTwIa9mgio646TBME8IrYP5hxvWD0TotezbtjNE562p9eEm3AN6wISLlmOemWUfgptTok5wnVz4jbhIe0cZpomvozMtPiRNpstvksKhE-2so3y7S1cW7CNSvMyW43rlobaSizl5I90pjL8XBNRO1u4kTUa9Bd",
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+"content-type": "application/json",
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+SP-API request headers: {
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+"user-agent": "Ber2bytesync/1.0 (Language=TypeScript)"
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+}
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+✅ Marketplace Participations SUCCESS!
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+Using cached access token
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+Marketplace participations SUCCESS - Found 7 marketplaces
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+"accept": "application/json",
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+Found 7 marketplace registrations
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+SP-API request URL: https://sellingpartnerapi-na.amazon.com/catalog/2022-04-01/items?keywords=laptop&marketplaceIds=ATVPDKIKX0DER
+2025-11-30 10:30:16.63
+ae3ab28c
+User
+=== TEST 2: CATALOG SEARCH ===
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+]
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+"code": "Unauthorized",
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+"errors": [
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+SP-API Error - Status: 403, URL: https://sellingpartnerapi-na.amazon.com/catalog/2022-04-01/items?keywords=laptop&marketplaceIds=ATVPDKIKX0DER
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+"details": ""
+2025-11-30 10:30:16.67
+ae3ab28c
+User
+SP-API Error Response: {
