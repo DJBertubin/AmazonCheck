@@ -39,7 +39,18 @@ export default function Dashboard() {
   const { currentAccountId, currentMarketplace } = useAccountContext();
 
   const { data, isLoading } = useQuery<DashboardData>({
-    queryKey: ['/api/dashboard', currentAccountId, currentMarketplace],
+    queryKey: ['dashboard', currentAccountId, currentMarketplace],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/${currentAccountId}/${currentMarketplace}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 
