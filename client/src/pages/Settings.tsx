@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,32 @@ export default function Settings() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [selectedMarketplace, setSelectedMarketplace] = useState('US');
+
+  useEffect(() => {
+    const handleAmazonOAuthMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.source !== 'amazon-oauth') return;
+
+      queryClient.invalidateQueries({ queryKey: ['/api/amazon/connections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+
+      if (event.data.status === 'success') {
+        toast({
+          title: 'Success',
+          description: 'Amazon account connected successfully',
+        });
+        window.history.replaceState({}, '', '/settings?tab=amazon');
+      } else {
+        toast({
+          title: 'Error',
+          description: event.data.message || 'Failed to connect Amazon account',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    window.addEventListener('message', handleAmazonOAuthMessage);
+    return () => window.removeEventListener('message', handleAmazonOAuthMessage);
+  }, [toast, queryClient]);
 
   const marketplaceNames: Record<string, string> = {
     US: 'United States',

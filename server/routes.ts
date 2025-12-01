@@ -656,8 +656,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build Amazon OAuth authorization URL
       const spApiAppId = process.env.AMAZON_SP_API_APP_ID;
       // Use approved custom domain if available, otherwise fallback to Replit URL
-      const customDomain = process.env.CUSTOM_DOMAIN || `${req.protocol}://${req.get('host')}`;
-      const redirectUri = `${customDomain}/api/auth/amazon/callback`;
+      // Use explicit API base URL when provided to avoid sending the callback to the
+      // public marketing domain (which would render the SPA 404 page instead of
+      // hitting this backend route). Fall back to the current request host so the
+      // callback stays on the API origin and preserves the session cookies.
+      const apiBaseUrl = (process.env.API_BASE_URL || process.env.CUSTOM_DOMAIN || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+      const redirectUri = `${apiBaseUrl}/api/auth/amazon/callback`;
       
       const authUrl = new URL('https://sellercentral.amazon.com/apps/authorize/consent');
       authUrl.searchParams.set('application_id', spApiAppId || '');
@@ -784,12 +788,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect('/?error=db_save_failed&details=' + encodeURIComponent(dbError.message));
       }
 
-      // Redirect to settings page with success
-      console.log('OAuth flow complete, redirecting to settings');
-      res.redirect('/settings?tab=amazon&success=true');
+      // Build a lightweight HTML response that can safely render on the API origin
+      // (which may not host the frontend SPA). The page will notify the opener
+      // window via postMessage and close itself, so users don't see a 404/error
+      // even when the API runs on a different domain.
+      const frontendUrl = process.env.FRONTEND_URL || process.env.CUSTOM_DOMAIN;
+      const successHtml = `<!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>Amazon Connected</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+              .status { font-size: 20px; margin-bottom: 12px; }
+              .message { color: #0a8043; }
+            </style>
+          </head>
+          <body>
+            <div class="status">Amazon account connected!</div>
+            <div class="message">You can close this window.</div>
+            <script>
+              (function() {
+                const payload = { source: 'amazon-oauth', status: 'success', accountId: ${JSON.stringify(accountId)} };
+                try { window.opener && window.opener.postMessage(payload, '*'); } catch (_) {}
+                if (${JSON.stringify(frontendUrl || '')}) {
+                  try { window.opener && window.opener.location.replace(${JSON.stringify(frontendUrl + '/settings?tab=amazon')}); } catch (_) {}
+                }
+                setTimeout(() => window.close(), 500);
+              })();
+            </script>
+          </body>
+        </html>`;
+
+      console.log('OAuth flow complete, returning success page to close popup');
+      res.status(200).send(successHtml);
     } catch (error) {
       console.error("Error in Amazon OAuth callback:", error);
-      res.redirect('/?error=connection_failed');
+      const errorHtml = `<!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>Amazon Connection Failed</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+              .status { font-size: 20px; margin-bottom: 12px; color: #b42318; }
+              .message { color: #b42318; }
+            </style>
+          </head>
+          <body>
+            <div class="status">Amazon connection failed</div>
+            <div class="message">${(error as Error)?.message || 'Unexpected error. Please try again.'}</div>
+            <script>
+              (function() {
+                const payload = { source: 'amazon-oauth', status: 'error', message: ${JSON.stringify((error as Error)?.message || 'Unexpected error')} };
+                try { window.opener && window.opener.postMessage(payload, '*'); } catch (_) {}
+                setTimeout(() => window.close(), 1500);
+              })();
+            </script>
+          </body>
+        </html>`;
+
+      res.status(500).send(errorHtml);
     }
   });
 
