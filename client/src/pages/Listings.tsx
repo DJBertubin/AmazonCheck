@@ -31,7 +31,18 @@ export default function Listings() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const { data: listings = [], isLoading } = useQuery<Listing[]>({
-    queryKey: ['/api/listings', currentAccountId, currentMarketplace],
+    queryKey: ['listings', currentAccountId, currentMarketplace],
+    queryFn: async () => {
+      const response = await fetch(`/api/listings/${currentAccountId}/${currentMarketplace}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 

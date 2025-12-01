@@ -36,12 +36,35 @@ export default function Inventory() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
 
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery<InventoryType[]>({
-    queryKey: ['/api/inventory', currentAccountId, currentMarketplace],
+    queryKey: ['inventory', currentAccountId, currentMarketplace],
+    queryFn: async () => {
+      const response = await fetch(`/api/inventory/${currentAccountId}/${currentMarketplace}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery<InventorySummary>({
-    queryKey: ['/api/inventory/summary', currentAccountId, currentMarketplace],
+    queryKey: ['inventory-summary', currentAccountId, currentMarketplace],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/inventory/summary?accountId=${currentAccountId}&marketplace=${currentMarketplace}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 

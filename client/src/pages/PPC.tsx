@@ -35,12 +35,34 @@ export default function PPC() {
   const [dateRange, setDateRange] = useState('30');
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<PPCCampaign[]>({
-    queryKey: ['/api/ppc/campaigns', currentAccountId, currentMarketplace],
+    queryKey: ['ppc-campaigns', currentAccountId, currentMarketplace],
+    queryFn: async () => {
+      const response = await fetch(`/api/ppc/campaigns/${currentAccountId}/${currentMarketplace}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<PPCMetrics>({
-    queryKey: ['/api/ppc/metrics', currentAccountId, currentMarketplace, dateRange],
+    queryKey: ['ppc-metrics', currentAccountId, currentMarketplace, dateRange],
+    queryFn: async () => {
+      const response = await fetch(`/api/ppc/metrics/${currentAccountId}/${currentMarketplace}?dateRange=${dateRange}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
     enabled: !!currentAccountId && !!currentMarketplace,
   });
 
