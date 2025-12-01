@@ -11,7 +11,7 @@ import {
   SidebarHeader,
 } from '@/components/ui/sidebar';
 import { Link, useLocation } from 'wouter';
-import logoImage from '@assets/Ber2bytes Web copy_1763529860811.png';
+import logoImage from '@assets/generated_images/ber2bytesync_app_logo_300x300_c0f5470f.png';
 
 const navigationItems = [
   {
