@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { AmazonSPAPIClient } from "./amazonClient";
-import { insertAmazonCredentialsSchema } from "@shared/schema";
+import { insertAmazonCredentialsSchema, type DashboardMetric } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -310,17 +310,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/dashboard/:accountId/:marketplace', isAuthenticated, async (req: any, res) => {
-    try {
-      const { accountId, marketplace } = req.params;
-      
-      if (!accountId || !marketplace) {
-        return res.status(400).json({ message: "accountId and marketplace are required" });
-      }
+    const { accountId, marketplace } = req.params;
 
+    if (!accountId || !marketplace) {
+      return res.status(400).json({ message: "accountId and marketplace are required" });
+    }
+
+    const metrics = await storage.getDashboardMetricsByAccount(accountId as string, marketplace as string);
+
+    const buildResponseFromMetrics = (data: DashboardMetric[]) => {
+      if (data.length === 0) return null;
+
+      const sorted = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const latest = sorted[sorted.length - 1];
+      const previous = sorted[sorted.length - 2] || latest;
+
+      const toNumber = (value: any) => Number(value ?? 0);
+      const getPercentChange = (current: any, prev: any) => {
+        const currentVal = toNumber(current);
+        const prevVal = toNumber(prev);
+        if (prevVal === 0) return 0;
+        return Math.round(((currentVal - prevVal) / prevVal) * 100);
+      };
+
+      const salesChartData = sorted.map((metric) => ({
+        date: metric.date.toISOString().split('T')[0],
+        sales: toNumber(metric.totalSales),
+      }));
+
+      const ppcChartData = sorted.map((metric) => ({
+        date: metric.date.toISOString().split('T')[0],
+        spend: toNumber(metric.ppcSpend),
+        sales: toNumber(metric.totalSales),
+      }));
+
+      return {
+        kpis: {
+          totalSales: toNumber(latest.totalSales),
+          totalOrders: latest.totalOrders || 0,
+          ppcSpend: toNumber(latest.ppcSpend),
+          roas: toNumber(latest.roas) || 0,
+          salesChange: getPercentChange(latest.totalSales, previous.totalSales),
+          ordersChange: getPercentChange(latest.totalOrders, previous.totalOrders),
+          spendChange: getPercentChange(latest.ppcSpend, previous.ppcSpend),
+          roasChange: getPercentChange(latest.roas, previous.roas),
+        },
+        salesChartData,
+        ppcChartData,
+        topAsins: [],
+        alerts: [],
+      };
+    };
+
+    const metricsResponse = buildResponseFromMetrics(metrics);
+
+    try {
       // Get Amazon credentials
       const credentials = await storage.getAmazonCredentialsByAccount(accountId as string);
-      
+
       if (!credentials || !credentials.isActive) {
+        if (metricsResponse) {
+          return res.json(metricsResponse);
+        }
         return res.status(400).json({ message: "Amazon account not connected or inactive" });
       }
 
@@ -330,7 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Try different API endpoints to find which ones work
       console.log(`Testing Amazon SP-API access for seller ${credentials.sellerId}...`);
-      
+
       let orders: any[] = [];
       let catalogItems: any[] = [];
 
@@ -371,13 +422,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const order of orders) {
         const orderTotal = parseFloat(order.OrderTotal?.Amount || '0');
         totalSales += orderTotal;
-        
+
         const orderDate = order.PurchaseDate?.split('T')[0] || new Date().toISOString().split('T')[0];
         salesByDate[orderDate] = (salesByDate[orderDate] || 0) + orderTotal;
       }
 
       // Generate chart data for last 30 days
-      const salesChartData = [];
+      const salesChartData = [] as Array<{ date: string; sales: number }>;
       for (let i = 29; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
@@ -396,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sales: d.sales,
       }));
 
-      res.json({
+      return res.json({
         kpis: {
           totalSales: Math.round(totalSales * 100) / 100,
           totalOrders,
@@ -419,9 +470,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
-      res.status(502).json({ 
+      if (metricsResponse) {
+        return res.json(metricsResponse);
+      }
+      res.status(502).json({
         message: "Failed to fetch dashboard data from Amazon SP-API",
-        error: error.message 
+        error: error.message
       });
     }
   });
