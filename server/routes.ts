@@ -656,8 +656,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build Amazon OAuth authorization URL
       const spApiAppId = process.env.AMAZON_SP_API_APP_ID;
       // Use approved custom domain if available, otherwise fallback to Replit URL
-      const customDomain = process.env.CUSTOM_DOMAIN || `${req.protocol}://${req.get('host')}`;
-      const redirectUri = `${customDomain}/api/auth/amazon/callback`;
+      // Use explicit API base URL when provided to avoid sending the callback to the
+      // public marketing domain (which would render the SPA 404 page instead of
+      // hitting this backend route). Fall back to the current request host so the
+      // callback stays on the API origin and preserves the session cookies.
+      const apiBaseUrl = (process.env.API_BASE_URL || process.env.CUSTOM_DOMAIN || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+      const redirectUri = `${apiBaseUrl}/api/auth/amazon/callback`;
       
       const authUrl = new URL('https://sellercentral.amazon.com/apps/authorize/consent');
       authUrl.searchParams.set('application_id', spApiAppId || '');
