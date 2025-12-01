@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { AmazonSPAPIClient } from "./amazonClient";
-import { insertAmazonCredentialsSchema, type DashboardMetric } from "@shared/schema";
+import { insertAmazonCredentialsSchema, type DashboardMetric, type Listing } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -481,17 +481,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/listings/:accountId/:marketplace', isAuthenticated, async (req: any, res) => {
+    const { accountId, marketplace } = req.params;
+
     try {
-      const { accountId, marketplace } = req.params;
-      
       if (!accountId || !marketplace) {
         return res.status(400).json({ message: "accountId and marketplace are required" });
       }
 
+      // Always load any locally stored listings so we can serve them if Amazon is unavailable
+      const localListings: Listing[] = await storage.getListingsByAccount(accountId as string, marketplace as string);
+
       // Get Amazon credentials
       const credentials = await storage.getAmazonCredentialsByAccount(accountId as string);
-      
+
       if (!credentials || !credentials.isActive) {
+        if (localListings.length > 0) {
+          console.warn("Amazon credentials inactive or missing - returning stored listings");
+          return res.json(localListings);
+        }
         return res.status(400).json({ message: "Amazon account not connected or inactive" });
       }
 
@@ -526,9 +533,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(listings);
     } catch (error: any) {
       console.error("Error fetching listings:", error);
-      res.status(502).json({ 
+      try {
+        // Gracefully fall back to locally stored listings if available
+        const { accountId, marketplace } = req.params;
+        const localListings: Listing[] = await storage.getListingsByAccount(accountId as string, marketplace as string);
+        if (localListings.length > 0) {
+          console.warn(`Serving ${localListings.length} stored listings after Amazon SP-API failure`);
+          return res.json(localListings);
+        }
+      } catch (fallbackError) {
+        console.error("Failed to load fallback listings:", fallbackError);
+      }
+
+      res.status(502).json({
         message: "Failed to fetch listings from Amazon SP-API",
-        error: error.message 
+        error: error.message
       });
     }
   });
