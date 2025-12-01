@@ -9,11 +9,40 @@ interface TestResult {
   itemsFound?: number;
   sample?: any[];
   details?: string;
+  solution?: string;
 }
 
 export default function TestAmazon() {
   const { data, isLoading, error, refetch } = useQuery<TestResult>({
     queryKey: ['/api/test-amazon-public'],
+    queryFn: async () => {
+      const res = await fetch('/api/test-amazon-public', { credentials: 'include' });
+      const text = await res.text();
+
+      let parsed: any = {};
+      try {
+        parsed = text ? JSON.parse(text) : {};
+      } catch {
+        parsed = { message: text || res.statusText };
+      }
+
+      if (!res.ok) {
+        return {
+          success: false,
+          message: parsed.message || res.statusText,
+          details: parsed.details || parsed.diagnosis || undefined,
+          solution: parsed.solution,
+          sample: parsed.sample,
+        } satisfies TestResult;
+      }
+
+      return {
+        success: true,
+        message: parsed.message || 'Test succeeded',
+        itemsFound: parsed.test2_catalogItems ?? parsed.itemsFound,
+        sample: parsed.sample,
+      } satisfies TestResult;
+    },
     enabled: false, // Don't auto-run
   });
 
@@ -72,15 +101,20 @@ export default function TestAmazon() {
                       <XCircle className="h-5 w-5" />
                       <span className="font-semibold">Test Failed</span>
                     </div>
-                    <div className="text-sm">
-                      <strong>Error:</strong> {data.message}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {data.details}
-                    </div>
+                  <div className="text-sm">
+                    <strong>Error:</strong> {data.message}
                   </div>
-                )}
-              </CardContent>
+                  {(data.details || data.solution) && (
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      {data.details && <p>{data.details}</p>}
+                      {data.solution && (
+                        <p className="font-medium text-foreground">Solution: {data.solution}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
             </Card>
           )}
 
