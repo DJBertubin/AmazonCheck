@@ -3,7 +3,16 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const gatewayHint = [502, 503, 504].includes(res.status)
+      ? 'The API gateway could not reach the backend. Make sure the server is running and accessible.'
+      : '';
+
+    const message = [
+      `${res.status}: ${text}`,
+      gatewayHint,
+    ].filter(Boolean).join(' — ');
+
+    throw new Error(message);
   }
 }
 
