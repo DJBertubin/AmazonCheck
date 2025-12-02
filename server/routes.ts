@@ -215,14 +215,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!credentials || !accountWithCredentials) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "No Amazon credentials found in DATABASE for any account",
           totalAccounts: accounts.length,
           debug: "None of your accounts have connected to Amazon via OAuth yet. Complete the OAuth flow to save credentials.",
           hint: "Use /api/test-amazon-env to test with environment credentials instead"
         });
       }
-      
+
+      const missingCredentialFields = [
+        !credentials.lwaClientId && "LWA Client ID",
+        !credentials.lwaClientSecret && "LWA Client Secret",
+        !credentials.refreshToken && "Refresh Token",
+      ].filter(Boolean) as string[];
+
+      if (missingCredentialFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          source: 'DATABASE',
+          message: 'Amazon credentials are incomplete',
+          details: `Missing: ${missingCredentialFields.join(', ')}`,
+          solution: 'Reconnect your Amazon account to refresh the stored credentials',
+        });
+      }
+
       console.log(`Using account: ${accountWithCredentials.brandName}`);
       console.log(`Seller ID: ${credentials.sellerId}`);
       console.log(`Region: ${credentials.region}`);
@@ -253,16 +269,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Marketplace participation test failed:', participationError.message);
         
         // Return detailed error for debugging
-        res.status(502).json({ 
+        res.status(502).json({
           success: false,
           source: 'DATABASE',
           message: participationError.message,
-          details: `403 error indicates authorization mismatch. The refresh token may be tied to a DRAFT version of your app. To fix:
+          details: participationError.message?.includes('fetch failed')
+            ? 'Server could not reach Amazon SP-API. Verify outbound internet access and DNS configuration.'
+            : `403 error indicates authorization mismatch. The refresh token may be tied to a DRAFT version of your app. To fix:
 1. Go to Amazon Seller Central → Apps & Services → Manage Your Apps
 2. Find Ber2bytesync and REVOKE the authorization
 3. Return here and reconnect the account (this will use your PUBLISHED app)
 4. The new refresh token will work with the production app`,
-          solution: 'Revoke and re-authorize in Seller Central to get a production refresh token'
+          solution: participationError.message?.includes('fetch failed')
+            ? 'Check hosting network rules or try again when connectivity to Amazon is restored'
+            : 'Revoke and re-authorize in Seller Central to get a production refresh token'
         });
       }
     } catch (error: any) {
