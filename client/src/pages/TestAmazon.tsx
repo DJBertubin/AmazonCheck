@@ -16,32 +16,44 @@ export default function TestAmazon() {
   const { data, isLoading, error, refetch } = useQuery<TestResult>({
     queryKey: ['/api/test-amazon-public'],
     queryFn: async () => {
-      const res = await fetch('/api/test-amazon-public', { credentials: 'include' });
-      const text = await res.text();
-
-      let parsed: any = {};
       try {
-        parsed = text ? JSON.parse(text) : {};
-      } catch {
-        parsed = { message: text || res.statusText };
-      }
+        const res = await fetch('/api/test-amazon-public', { credentials: 'include' });
+        const text = await res.text();
 
-      if (!res.ok) {
+        let parsed: any = {};
+        try {
+          parsed = text ? JSON.parse(text) : {};
+        } catch {
+          parsed = { message: text || res.statusText };
+        }
+
+        const gatewayHint = [502, 503, 504].includes(res.status)
+          ? 'The API server is unreachable. Start the backend or check the proxy configuration and try again.'
+          : undefined;
+
+        if (!res.ok) {
+          return {
+            success: false,
+            message: parsed.message || res.statusText || 'Request failed',
+            details: parsed.details || parsed.diagnosis || gatewayHint,
+            solution: parsed.solution ?? gatewayHint,
+            sample: parsed.sample,
+          } satisfies TestResult;
+        }
+
         return {
-          success: false,
-          message: parsed.message || res.statusText,
-          details: parsed.details || parsed.diagnosis || undefined,
-          solution: parsed.solution,
+          success: true,
+          message: parsed.message || 'Test succeeded',
+          itemsFound: parsed.test2_catalogItems ?? parsed.itemsFound,
           sample: parsed.sample,
         } satisfies TestResult;
+      } catch (err: any) {
+        return {
+          success: false,
+          message: err?.message || 'Request failed',
+          details: 'Network error while calling /api/test-amazon-public. Verify the API server is reachable.',
+        } satisfies TestResult;
       }
-
-      return {
-        success: true,
-        message: parsed.message || 'Test succeeded',
-        itemsFound: parsed.test2_catalogItems ?? parsed.itemsFound,
-        sample: parsed.sample,
-      } satisfies TestResult;
     },
     enabled: false, // Don't auto-run
   });
